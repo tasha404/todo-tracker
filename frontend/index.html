@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastel Todo Tracker ✨</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-check-circle"></i>
+                <h1>Pastel Todo Tracker</h1>
+            </div>
+            <p class="subtitle">Stay organized with cute pastel vibes ✨</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="progress-card">
+                <h2><i class="fas fa-chart-line"></i> Progress Tracker</h2>
+                <div class="progress-circle">
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle class="progress-bg" cx="60" cy="60" r="54"></circle>
+                        <circle class="progress-bar" cx="60" cy="60" r="54"></circle>
+                    </svg>
+                    <div class="progress-text">
+                        <span class="percentage">0%</span>
+                        <span class="completed">0/0 completed</span>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-label">Total Tasks</span>
+                        <span class="stat-value" id="total-tasks">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Completed</span>
+                        <span class="stat-value" id="completed-tasks">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="add-todo">
+                <h2><i class="fas fa-plus-circle"></i> Add New Task</h2>
+                <div class="input-group">
+                    <input type="text" id="new-task" placeholder="What needs to be done? 🌸" maxlength="100">
+                    <select id="task-category">
+                        <option value="general">General 🎀</option>
+                        <option value="work">Work 💼</option>
+                        <option value="personal">Personal 🌸</option>
+                        <option value="shopping">Shopping 🛍️</option>
+                        <option value="health">Health 🏃‍♀️</option>
+                    </select>
+                    <button id="add-btn">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="todo-section">
+            <div class="section-header">
+                <h2><i class="fas fa-list-check"></i> My Tasks</h2>
+                <div class="filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="pending">Pending</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+            </div>
+
+            <div class="todo-list" id="todo-list">
+                <!-- Todos will be added here dynamically -->
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>No tasks yet!</h3>
+                    <p>Add your first task to get started 🌈</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Made with <i class="fas fa-heart"></i> and pastel colors</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
