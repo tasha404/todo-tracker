@@ -322,6 +322,166 @@ function showNotification(message, type) {
     }, 3000);
 }
 
+function createConfetti(count = 50) {
+    const colors = ['#ffd6e7', '#d4f1d4', '#e6e6fa', '#fffacd', '#d4f4ff'];
+    
+    for (let i = 0; i < count; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.width = Math.random() * 15 + 5 + 'px';
+        confetti.style.height = confetti.style.width;
+        confetti.style.animationDelay = Math.random() * 2 + 's';
+        
+        document.body.appendChild(confetti);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (confetti.parentNode) {
+                confetti.parentNode.removeChild(confetti);
+            }
+        }, 3000);
+    }
+}
+
+// Enhanced showNotification function with more animations
+function showNotification(message, type) {
+    // Remove existing notification
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) {
+        existingNotification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (existingNotification.parentNode) {
+                existingNotification.parentNode.removeChild(existingNotification);
+            }
+        }, 300);
+    }
+
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Trigger confetti for success notifications
+    if (type === 'success') {
+        setTimeout(() => createConfetti(20), 300);
+    }
+    
+    // Add bounce animation
+    notification.style.animation = 'slideIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add loading animation for async operations
+function showLoading(element) {
+    const originalHTML = element.innerHTML;
+    element.innerHTML = '<div class="loading-spinner"></div>';
+    element.disabled = true;
+    return originalHTML;
+}
+
+function hideLoading(element, originalHTML) {
+    element.innerHTML = originalHTML;
+    element.disabled = false;
+}
+
+// Enhanced addTodo with loading state
+async function addTodo() {
+    const task = newTaskInput.value.trim();
+    const category = taskCategorySelect.value;
+
+    if (!task) {
+        showNotification('Please enter a task! 🌸', 'warning');
+        newTaskInput.focus();
+        return;
+    }
+
+    const originalButtonHTML = showLoading(addBtn);
+    
+    try {
+        const response = await fetch(`${API_URL}/todos`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                task: task,
+                category: category
+            }),
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            newTaskInput.value = '';
+            newTaskInput.focus();
+            // Add a nice visual effect
+            taskCategorySelect.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                taskCategorySelect.style.transform = 'scale(1)';
+            }, 300);
+            
+            fetchTodos();
+            showNotification('Task added successfully! ✨', 'success');
+        } else {
+            throw new Error(data.error || 'Failed to add task');
+        }
+    } catch (error) {
+        console.error('Error adding todo:', error);
+        showNotification(error.message, 'error');
+    } finally {
+        hideLoading(addBtn, originalButtonHTML);
+    }
+}
+
+// Enhanced deleteTodo with better animations
+async function deleteTodo(id) {
+    const todoItem = document.querySelector(`.todo-item[data-id="${id}"]`);
+    
+    if (todoItem) {
+        todoItem.style.animation = 'slideOut 0.3s ease';
+        todoItem.style.transformOrigin = 'left';
+    }
+    
+    setTimeout(async () => {
+        try {
+            const response = await fetch(`${API_URL}/todos/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                fetchTodos();
+                showNotification('Task deleted successfully! 🗑️', 'success');
+            } else {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete task');
+            }
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+            showNotification(error.message, 'error');
+            // Restore animation if error
+            if (todoItem) {
+                todoItem.style.animation = 'todoAppear 0.5s ease';
+            }
+        }
+    }, 300);
+}
+
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
