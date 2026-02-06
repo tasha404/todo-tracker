@@ -3,6 +3,7 @@
     --pastel-green: #d4f1d4;
     --pastel-purple: #e6e6fa;
     --pastel-yellow: #fffacd;
+    --pastel-blue: #d4f4ff;
     --soft-pink: #ffb6c1;
     --soft-green: #98fb98;
     --dark-pink: #ff8fab;
@@ -10,6 +11,7 @@
     --white: #ffffff;
     --gray: #f5f5f5;
     --text: #555555;
+    --shadow-color: rgba(255, 182, 193, 0.2);
 }
 
 * {
@@ -24,6 +26,12 @@ body {
     min-height: 100vh;
     padding: 20px;
     color: var(--text);
+    animation: gradientFlow 20s ease infinite;
+}
+
+@keyframes gradientFlow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 .container {
@@ -32,8 +40,58 @@ body {
     background: rgba(255, 255, 255, 0.95);
     border-radius: 25px;
     padding: 30px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px var(--shadow-color);
     border: 3px solid var(--soft-pink);
+    animation: floatContainer 6s ease-in-out infinite;
+    backdrop-filter: blur(10px);
+}
+
+@keyframes floatContainer {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Floating Elements */
+.floating-element {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: var(--pastel-blue);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+    z-index: -1;
+}
+
+.floating-element:nth-child(1) {
+    top: 10%;
+    left: 5%;
+    width: 30px;
+    height: 30px;
+    background: var(--pastel-pink);
+    animation-delay: 0s;
+}
+
+.floating-element:nth-child(2) {
+    top: 20%;
+    right: 8%;
+    width: 50px;
+    height: 50px;
+    background: var(--pastel-green);
+    animation-delay: 1s;
+}
+
+.floating-element:nth-child(3) {
+    bottom: 30%;
+    left: 10%;
+    width: 35px;
+    height: 35px;
+    background: var(--pastel-purple);
+    animation-delay: 2s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
 }
 
 /* Header */
@@ -42,6 +100,18 @@ header {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 3px dashed var(--soft-green);
+    animation: slideDown 0.8s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .logo {
@@ -58,18 +128,52 @@ header {
     background: var(--pastel-pink);
     padding: 15px;
     border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 .logo h1 {
     color: #ff6b93;
     font-size: 2.2rem;
     text-shadow: 2px 2px 0px rgba(255, 182, 193, 0.3);
+    background: linear-gradient(45deg, #ff6b93, #ff8fab);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: colorShift 3s infinite alternate;
+}
+
+@keyframes colorShift {
+    from { filter: hue-rotate(0deg); }
+    to { filter: hue-rotate(20deg); }
 }
 
 .subtitle {
     color: var(--dark-green);
     font-size: 1.1rem;
     font-weight: bold;
+    position: relative;
+    display: inline-block;
+}
+
+.subtitle::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--dark-green), transparent);
+    bottom: -5px;
+    left: 0;
+    animation: subtitleUnderline 3s infinite;
+}
+
+@keyframes subtitleUnderline {
+    0%, 100% { transform: scaleX(0); opacity: 0; }
+    50% { transform: scaleX(1); opacity: 1; }
 }
 
 /* Dashboard */
@@ -86,10 +190,29 @@ header {
     padding: 25px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     border: 2px solid var(--pastel-green);
+    animation: cardAppear 0.6s ease-out;
+    transition: all 0.3s ease;
+}
+
+@keyframes cardAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.progress-card:hover, .add-todo:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 30px var(--shadow-color);
 }
 
 .add-todo {
     border: 2px solid var(--pastel-pink);
+    animation-delay: 0.2s;
 }
 
 h2 {
@@ -103,6 +226,12 @@ h2 {
 
 h2 i {
     color: var(--dark-pink);
+    animation: spinSlow 10s linear infinite;
+}
+
+@keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* Progress Circle */
@@ -117,6 +246,12 @@ h2 i {
     fill: none;
     stroke: var(--pastel-pink);
     stroke-width: 8;
+    animation: pulseBg 4s ease-in-out infinite;
+}
+
+@keyframes pulseBg {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
 }
 
 .progress-bar {
@@ -126,7 +261,8 @@ h2 i {
     stroke-linecap: round;
     transform: rotate(-90deg);
     transform-origin: 50% 50%;
-    transition: stroke-dashoffset 0.5s ease;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    filter: drop-shadow(0 0 5px var(--dark-green));
 }
 
 .progress-text {
@@ -135,6 +271,12 @@ h2 i {
     left: 50%;
     transform: translate(-50%, -50%);
     text-align: center;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-50%, -50%) scale(1.05); }
 }
 
 .percentage {
@@ -142,6 +284,7 @@ h2 i {
     font-size: 1.8rem;
     font-weight: bold;
     color: var(--dark-green);
+    text-shadow: 0 0 10px rgba(119, 221, 119, 0.3);
 }
 
 .completed {
@@ -160,6 +303,11 @@ h2 i {
 
 .stat {
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat:hover {
+    transform: scale(1.1);
 }
 
 .stat-label {
@@ -174,6 +322,7 @@ h2 i {
     font-size: 1.8rem;
     font-weight: bold;
     color: var(--dark-pink);
+    text-shadow: 0 0 10px rgba(255, 143, 171, 0.3);
 }
 
 /* Add Todo */
@@ -190,6 +339,12 @@ h2 i {
     outline: none;
     transition: all 0.3s ease;
     background: var(--white);
+    animation: inputGlow 3s infinite alternate;
+}
+
+@keyframes inputGlow {
+    from { box-shadow: 0 0 0px var(--pastel-pink); }
+    to { box-shadow: 0 0 10px var(--pastel-pink); }
 }
 
 #new-task {
@@ -199,13 +354,21 @@ h2 i {
 
 #new-task:focus {
     border-color: var(--dark-pink);
-    box-shadow: 0 0 0 3px rgba(255, 182, 193, 0.3);
+    box-shadow: 0 0 15px rgba(255, 182, 193, 0.5);
+    animation: none;
+    transform: scale(1.02);
 }
 
 #task-category {
     flex: 1;
     color: var(--text);
     cursor: pointer;
+    background: var(--pastel-pink);
+}
+
+#task-category option {
+    background: white;
+    color: var(--text);
 }
 
 #add-btn {
@@ -221,11 +384,32 @@ h2 i {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+#add-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: 0.5s;
+}
+
+#add-btn:hover::before {
+    left: 100%;
 }
 
 #add-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 107, 147, 0.4);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(255, 107, 147, 0.6);
+}
+
+#add-btn:active {
+    transform: translateY(0) scale(0.98);
 }
 
 /* Todo Section */
@@ -235,6 +419,20 @@ h2 i {
     padding: 25px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     border: 2px solid var(--pastel-purple);
+    animation: slideUp 0.8s ease-out;
+    animation-delay: 0.4s;
+    animation-fill-mode: backwards;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .section-header {
@@ -258,17 +456,50 @@ h2 i {
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: bold;
+    position: relative;
+    overflow: hidden;
+}
+
+.filter-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.filter-btn:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(50, 50);
+        opacity: 0;
+    }
 }
 
 .filter-btn.active {
     background: var(--pastel-green);
     border-color: var(--dark-green);
     color: var(--dark-green);
+    box-shadow: 0 0 10px rgba(119, 221, 119, 0.3);
 }
 
 .filter-btn:hover:not(.active) {
     background: var(--pastel-pink);
     border-color: var(--dark-pink);
+    transform: translateY(-2px);
 }
 
 /* Todo List */
@@ -280,21 +511,40 @@ h2 i {
     display: flex;
     align-items: center;
     padding: 20px;
-    background: var(--gray);
+    background: linear-gradient(135deg, var(--pastel-purple), var(--pastel-blue));
     border-radius: 15px;
     margin-bottom: 15px;
     border-left: 5px solid var(--soft-green);
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    animation: todoAppear 0.5s ease-out;
+    transform-origin: left;
 }
 
+@keyframes todoAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+.todo-item:nth-child(1) { animation-delay: 0.1s; }
+.todo-item:nth-child(2) { animation-delay: 0.2s; }
+.todo-item:nth-child(3) { animation-delay: 0.3s; }
+.todo-item:nth-child(4) { animation-delay: 0.4s; }
+
 .todo-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transform: translateX(10px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .todo-item.completed {
     opacity: 0.8;
     border-left-color: var(--dark-pink);
+    background: linear-gradient(135deg, var(--pastel-green), var(--pastel-yellow));
 }
 
 .todo-checkbox {
@@ -303,21 +553,57 @@ h2 i {
     margin-right: 15px;
     cursor: pointer;
     accent-color: var(--dark-green);
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.todo-checkbox:hover {
+    transform: scale(1.2);
+}
+
+.todo-checkbox:checked {
+    animation: checkboxCheck 0.5s ease;
+}
+
+@keyframes checkboxCheck {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
 }
 
 .todo-content {
     flex: 1;
+    animation: contentReveal 0.5s ease-out;
+}
+
+@keyframes contentReveal {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .todo-task {
     font-size: 1.1rem;
     margin-bottom: 5px;
     color: var(--text);
+    transition: all 0.3s ease;
 }
 
 .todo-item.completed .todo-task {
     text-decoration: line-through;
     color: #888;
+    animation: taskComplete 0.5s ease;
+}
+
+@keyframes taskComplete {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(10px); }
+    100% { transform: translateX(0); }
 }
 
 .todo-category {
@@ -328,6 +614,12 @@ h2 i {
     font-size: 0.8rem;
     color: var(--dark-pink);
     font-weight: bold;
+    animation: categoryBounce 2s infinite;
+}
+
+@keyframes categoryBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
 }
 
 .todo-actions {
@@ -356,6 +648,7 @@ h2 i {
 .edit-btn:hover {
     background: var(--dark-green);
     color: white;
+    transform: rotate(15deg) scale(1.1);
 }
 
 .delete-btn {
@@ -366,6 +659,13 @@ h2 i {
 .delete-btn:hover {
     background: #ff6b6b;
     color: white;
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }
 
 /* Empty State */
@@ -373,17 +673,36 @@ h2 i {
     text-align: center;
     padding: 40px 20px;
     color: #888;
+    animation: fadeIn 1s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .empty-state i {
     font-size: 3rem;
     color: var(--pastel-pink);
     margin-bottom: 15px;
+    animation: floatEmpty 3s ease-in-out infinite;
+}
+
+@keyframes floatEmpty {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(5deg); }
 }
 
 .empty-state h3 {
     color: var(--dark-pink);
     margin-bottom: 10px;
+    animation: colorChange 4s infinite alternate;
+}
+
+@keyframes colorChange {
+    0% { color: var(--dark-pink); }
+    50% { color: var(--dark-green); }
+    100% { color: var(--dark-pink); }
 }
 
 /* Footer */
@@ -394,11 +713,33 @@ footer {
     border-top: 2px dashed var(--pastel-pink);
     color: var(--dark-green);
     font-weight: bold;
+    animation: footerAppear 1s ease;
+}
+
+@keyframes footerAppear {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 footer i {
     color: var(--dark-pink);
     margin: 0 5px;
+    animation: heartbeat 1.5s infinite;
+}
+
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Rainbow effect for completed tasks */
+@keyframes rainbow {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+.todo-item.completed:hover {
+    animation: rainbow 2s linear infinite;
 }
 
 /* Responsive */
@@ -427,5 +768,45 @@ footer i {
     
     .logo h1 {
         font-size: 1.8rem;
+    }
+    
+    .floating-element {
+        display: none;
+    }
+}
+
+/* Loading Animation */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--pastel-pink);
+    border-radius: 50%;
+    border-top-color: var(--dark-pink);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Confetti Effect */
+.confetti {
+    position: fixed;
+    width: 15px;
+    height: 15px;
+    opacity: 0;
+    pointer-events: none;
+    animation: confettiFall 3s linear forwards;
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(1000px) rotate(720deg);
+        opacity: 0;
     }
 }
