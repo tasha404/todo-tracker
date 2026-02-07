@@ -1,8 +1,9 @@
-// script.js - Firebase-Enabled Todo App
-// Bunny See, Bunny Do Todo App - Now with Firebase Firestore
+// script.js - Firebase-Enabled Todo App (DEBUG VERSION)
+
+console.log('🚀 script.js loading...');
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🐰 Todo app initialized with Firebase');
+    console.log('✅ DOM Content Loaded');
     initializeApp();
 });
 
@@ -21,48 +22,49 @@ const percentageElement = document.querySelector('.percentage');
 const completedTasksElement = document.getElementById('completed-tasks');
 const totalTasksElement = document.getElementById('total-tasks');
 const progressBar = document.querySelector('.progress-bar');
-const importLocalBtn = document.getElementById('import-local');
-const exportBtn = document.getElementById('export-btn');
 
 // Initialize app
 function initializeApp() {
+    console.log('🐰 Initializing Todo App...');
     setupEventListeners();
     startFirebaseListener();
-    showNotification('Welcome to Bunny Todo! 🎀 Cloud sync enabled!', 'success', 2000);
-    
-    // Check for local storage migration
-    checkForLocalData();
+    console.log('✅ App initialized');
 }
 
 // Event Listeners
 function setupEventListeners() {
+    console.log('🔧 Setting up event listeners...');
+    
     addBtn.addEventListener('click', addTodo);
+    console.log('✅ Add button listener added');
+    
     newTaskInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') addTodo();
     });
+    console.log('✅ Enter key listener added');
 
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
             filterButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
             currentFilter = button.dataset.filter;
+            console.log('🔘 Filter changed to:', currentFilter);
             renderTodos();
         });
     });
-    
-    // Import/Export buttons
-    if (importLocalBtn) {
-        importLocalBtn.addEventListener('click', importFromLocalStorage);
-    }
-    
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportTodos);
-    }
+    console.log('✅ Filter button listeners added');
 }
 
 // Start Firebase real-time listener
 function startFirebaseListener() {
+    console.log('📡 Starting Firebase listener...');
+    
+    // Update status to loading
+    updateSyncStatus(false);
+    
     unsubscribeFromFirebase = firebaseService.subscribeToTodos((firestoreTodos) => {
+        console.log('📥 Received todos from Firebase:', firestoreTodos);
+        
         // Convert Firestore timestamps to regular dates
         const processedTodos = firestoreTodos.map(todo => {
             let createdAt = todo.createdAt;
@@ -75,42 +77,41 @@ function startFirebaseListener() {
             return {
                 ...todo,
                 created_at: createdAt,
-                // For compatibility with existing code
-                id: todo.id || todo.originalId || Date.now() + Math.random()
+                id: todo.id // Use Firestore document ID
             };
         });
         
         todos = processedTodos;
+        console.log('📊 Processed todos:', todos);
+        
         renderTodos();
         updateProgress();
-        updateSyncStatus(true);
+        updateSyncStatus(true, firestoreTodos.length === 0 && todos.length > 0);
+        
+        if (todos.length > 0) {
+            showNotification(`Loaded ${todos.length} tasks from cloud! ☁️`, 'success');
+        }
     });
-}
-
-// Check for local data and offer import
-function checkForLocalData() {
-    const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
-    if (localTodos.length > 0) {
-        setTimeout(() => {
-            if (confirm(`Found ${localTodos.length} tasks in local storage. Import to Firebase for cloud sync?`)) {
-                importFromLocalStorage();
-            }
-        }, 1500);
-    }
 }
 
 // Add new todo
 async function addTodo() {
+    console.log('➕ Add todo function called');
     const task = newTaskInput.value.trim();
     const category = taskCategorySelect.value;
 
+    console.log('📝 Task input:', task);
+    console.log('🏷️ Category:', category);
+
     if (!task) {
+        console.log('⚠️ Empty task, showing warning');
         showNotification('Please enter a task! 🌸', 'warning');
         newTaskInput.focus();
         return;
     }
 
     if (task.length > 100) {
+        console.log('⚠️ Task too long');
         showNotification('Task is too long (max 100 characters)', 'warning');
         return;
     }
@@ -121,9 +122,12 @@ async function addTodo() {
         completed: false
     };
 
+    console.log('📦 New todo object:', newTodo);
+    
     updateSyncStatus(false);
     
     const result = await firebaseService.addTodo(newTodo);
+    console.log('📨 Firebase add result:', result);
     
     if (result.success) {
         // Clear input
@@ -133,28 +137,42 @@ async function addTodo() {
         // Show success notification
         if (result.isLocal) {
             showNotification('Task added (saved locally) ✨', 'info');
+            console.log('💾 Task saved locally');
         } else {
             showNotification('Task added to cloud! ✨', 'success');
             createConfetti(15);
+            console.log('☁️ Task saved to Firebase');
         }
     } else {
         showNotification('Failed to add task 😢', 'error');
+        console.error('❌ Failed to add task');
     }
 }
 
 // Toggle todo completion
 async function toggleTodo(event) {
+    console.log('🔄 Toggle todo called');
     const checkbox = event.target;
     const todoItem = checkbox.closest('.todo-item');
     
-    if (!todoItem) return;
+    if (!todoItem) {
+        console.log('❌ No todo item found');
+        return;
+    }
     
     const id = todoItem.dataset.id;
-    const todo = todos.find(t => t.id === id);
+    console.log('🎯 Todo ID:', id);
     
-    if (!todo) return;
+    const todo = todos.find(t => t.id === id);
+    console.log('📋 Found todo:', todo);
+    
+    if (!todo) {
+        console.log('❌ Todo not found in array');
+        return;
+    }
     
     const newCompletedState = !todo.completed;
+    console.log('🔄 New completed state:', newCompletedState);
     
     // Update UI immediately for better UX
     if (newCompletedState) {
@@ -169,6 +187,7 @@ async function toggleTodo(event) {
     
     // Update in Firebase
     const result = await firebaseService.updateTodo(id, { completed: newCompletedState });
+    console.log('📨 Update result:', result);
     
     if (result.success) {
         const status = newCompletedState ? 'completed 🎉' : 'pending';
@@ -183,6 +202,7 @@ async function toggleTodo(event) {
         }
     } else {
         // Revert UI if update failed
+        console.log('❌ Update failed, reverting UI');
         checkbox.checked = !newCompletedState;
         if (newCompletedState) {
             todoItem.classList.remove('completed');
@@ -195,24 +215,40 @@ async function toggleTodo(event) {
 
 // Delete todo
 async function deleteTodo(event) {
+    console.log('🗑️ Delete todo called');
     const deleteBtn = event.target.closest('.delete-btn');
-    if (!deleteBtn) return;
+    if (!deleteBtn) {
+        console.log('❌ No delete button found');
+        return;
+    }
     
     const todoItem = deleteBtn.closest('.todo-item');
-    if (!todoItem) return;
+    if (!todoItem) {
+        console.log('❌ No todo item found');
+        return;
+    }
     
     const id = todoItem.dataset.id;
+    console.log('🎯 Todo ID to delete:', id);
+    
     const todo = todos.find(t => t.id === id);
+    console.log('📋 Todo to delete:', todo);
     
-    if (!todo) return;
+    if (!todo) {
+        console.log('❌ Todo not found');
+        return;
+    }
     
-    if (!confirm(`Delete "${todo.task.substring(0, 20)}${todo.task.length > 20 ? '...' : ''}"?`)) {
+    const taskPreview = todo.task.substring(0, 20) + (todo.task.length > 20 ? '...' : '');
+    if (!confirm(`Delete "${taskPreview}"?`)) {
+        console.log('❌ Delete cancelled by user');
         return;
     }
     
     updateSyncStatus(false);
     
     const result = await firebaseService.deleteTodo(id);
+    console.log('📨 Delete result:', result);
     
     if (result.success) {
         showNotification('Task deleted! 🗑️', 'success');
@@ -224,40 +260,17 @@ async function deleteTodo(event) {
     }
 }
 
-// Import from localStorage to Firebase
-async function importFromLocalStorage() {
-    updateSyncStatus(false);
-    
-    const result = await firebaseService.importFromLocalStorage();
-    
-    if (result.success) {
-        if (result.importedCount > 0) {
-            showNotification(`Imported ${result.importedCount} tasks to Firebase! 🚀`, 'success');
-            createConfetti(20);
-        } else {
-            showNotification('All tasks already synced to Firebase! ✅', 'info');
-        }
-    } else {
-        showNotification(result.message || 'Import failed', 'error');
-    }
-}
-
-// Export todos
-async function exportTodos() {
-    const result = await firebaseService.exportTodos();
-    
-    if (result.success) {
-        showNotification(`Exported ${result.count} tasks to JSON file 📁`, 'success');
-    } else {
-        showNotification(result.message || 'Export failed', 'error');
-    }
-}
-
 // Render todos to the screen
 function renderTodos() {
+    console.log('🎨 Rendering todos...');
+    console.log('📊 Current todos array:', todos);
+    console.log('🔍 Current filter:', currentFilter);
+    
     const filteredTodos = filterTodos();
+    console.log('🔍 Filtered todos:', filteredTodos);
     
     if (filteredTodos.length === 0) {
+        console.log('📭 No todos to display, showing empty state');
         todoList.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-clipboard-list fa-3x"></i>
@@ -268,7 +281,11 @@ function renderTodos() {
         return;
     }
 
-    todoList.innerHTML = filteredTodos.map(todo => `
+    console.log('🖼️ Rendering', filteredTodos.length, 'todos');
+    
+    todoList.innerHTML = filteredTodos.map(todo => {
+        console.log('🎨 Rendering todo:', todo);
+        return `
         <div class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
             <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
             <div class="todo-content">
@@ -285,17 +302,22 @@ function renderTodos() {
                 </button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
+
+    console.log('✅ Todos rendered to DOM');
 
     // Add event listeners using event delegation
     todoList.addEventListener('change', (event) => {
         if (event.target.classList.contains('todo-checkbox')) {
+            console.log('✅ Checkbox change event detected');
             toggleTodo(event);
         }
     });
 
     todoList.addEventListener('click', (event) => {
         if (event.target.closest('.delete-btn')) {
+            console.log('✅ Delete button click detected');
             deleteTodo(event);
         }
     });
@@ -303,21 +325,35 @@ function renderTodos() {
 
 // Filter todos based on current filter
 function filterTodos() {
+    console.log('🔍 Filtering todos with filter:', currentFilter);
+    
+    let filtered;
     switch (currentFilter) {
         case 'pending':
-            return todos.filter(todo => !todo.completed);
+            filtered = todos.filter(todo => !todo.completed);
+            console.log('📋 Pending todos:', filtered.length);
+            break;
         case 'completed':
-            return todos.filter(todo => todo.completed);
+            filtered = todos.filter(todo => todo.completed);
+            console.log('📋 Completed todos:', filtered.length);
+            break;
         default:
-            return todos;
+            filtered = todos;
+            console.log('📋 All todos:', filtered.length);
+            break;
     }
+    
+    return filtered;
 }
 
 // Update progress circle and stats
 function updateProgress() {
+    console.log('📈 Updating progress...');
     const total = todos.length;
     const completed = todos.filter(todo => todo.completed).length;
     const progress = total > 0 ? (completed / total) * 100 : 0;
+    
+    console.log('📊 Stats - Total:', total, 'Completed:', completed, 'Progress:', progress + '%');
     
     // Update progress circle animation
     const circumference = 2 * Math.PI * 54;
@@ -326,15 +362,30 @@ function updateProgress() {
     if (progressBar) {
         progressBar.style.strokeDasharray = `${circumference} ${circumference}`;
         progressBar.style.strokeDashoffset = offset;
+        console.log('🎯 Progress bar updated');
     }
     
     // Update text displays
-    if (percentageElement) percentageElement.textContent = `${Math.round(progress)}%`;
-    if (completedTasksElement) completedTasksElement.textContent = completed;
-    if (totalTasksElement) totalTasksElement.textContent = total;
+    if (percentageElement) {
+        percentageElement.textContent = `${Math.round(progress)}%`;
+        console.log('📊 Percentage updated:', percentageElement.textContent);
+    }
+    
+    if (completedTasksElement) {
+        completedTasksElement.textContent = completed;
+        console.log('📊 Completed tasks updated:', completedTasksElement.textContent);
+    }
+    
+    if (totalTasksElement) {
+        totalTasksElement.textContent = total;
+        console.log('📊 Total tasks updated:', totalTasksElement.textContent);
+    }
     
     const completedElement = document.querySelector('.completed');
-    if (completedElement) completedElement.textContent = `${completed}/${total} completed`;
+    if (completedElement) {
+        completedElement.textContent = `${completed}/${total} completed`;
+        console.log('📊 Completed text updated:', completedElement.textContent);
+    }
 }
 
 // Helper functions
@@ -346,12 +397,17 @@ function getCategoryIcon(category) {
         'shopping': '🛍️',
         'health': '🏃‍♀️'
     };
-    return icons[category] || '📌';
+    const icon = icons[category] || '📌';
+    console.log('🏷️ Category icon for', category + ':', icon);
+    return icon;
 }
 
 function formatDate(dateString) {
     try {
-        if (!dateString) return 'Recently';
+        if (!dateString) {
+            console.log('📅 No date string, returning "Recently"');
+            return 'Recently';
+        }
         
         const date = new Date(dateString);
         const now = new Date();
@@ -360,16 +416,17 @@ function formatDate(dateString) {
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
         
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
+        let result;
+        if (diffMins < 1) result = 'Just now';
+        else if (diffMins < 60) result = `${diffMins}m ago`;
+        else if (diffHours < 24) result = `${diffHours}h ago`;
+        else if (diffDays < 7) result = `${diffDays}d ago`;
+        else result = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric'
-        });
+        console.log('📅 Formatted date:', dateString, '→', result);
+        return result;
     } catch (error) {
+        console.error('❌ Error formatting date:', error);
         return 'Recently';
     }
 }
@@ -377,11 +434,14 @@ function formatDate(dateString) {
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
+    console.log('🔒 Escaped HTML for:', text.substring(0, 20) + '...');
     return div.innerHTML;
 }
 
 // Show notification
 function showNotification(message, type = 'info', duration = 3000) {
+    console.log('📢 Showing notification:', message, type);
+    
     // Remove existing notification
     const existingNotification = document.querySelector('.notification');
     if (existingNotification) existingNotification.remove();
@@ -403,6 +463,7 @@ function showNotification(message, type = 'info', duration = 3000) {
     `;
     
     document.body.appendChild(notification);
+    console.log('✅ Notification added to DOM');
     
     // Add animation
     notification.style.animation = 'slideIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
@@ -412,12 +473,15 @@ function showNotification(message, type = 'info', duration = 3000) {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
             if (notification.parentNode) notification.parentNode.removeChild(notification);
+            console.log('✅ Notification removed');
         }, 300);
     }, duration);
 }
 
 // Create confetti effect
 function createConfetti(count = 50) {
+    console.log('🎉 Creating confetti:', count, 'pieces');
+    
     const colors = ['#ffd6e7', '#d4f1d4', '#e6e6fa', '#fffacd', '#d4f4ff'];
     
     for (let i = 0; i < count; i++) {
@@ -436,14 +500,64 @@ function createConfetti(count = 50) {
             if (confetti.parentNode) confetti.parentNode.removeChild(confetti);
         }, 3000);
     }
+    
+    console.log('✅ Confetti created');
+}
+
+// Update sync status indicator (overrides firebase-config.js version)
+function updateSyncStatus(isSynced = true, isLocal = false) {
+    console.log('🔄 Updating sync status:', { isSynced, isLocal });
+    
+    const syncElement = document.getElementById('sync-status');
+    if (syncElement) {
+        if (isLocal) {
+            syncElement.innerHTML = '<i class="fas fa-laptop"></i> Local Mode';
+            syncElement.className = 'sync-indicator local';
+            console.log('💻 Sync status: Local Mode');
+        } else if (isSynced) {
+            syncElement.innerHTML = '<i class="fas fa-cloud"></i> Synced';
+            syncElement.className = 'sync-indicator synced';
+            console.log('☁️ Sync status: Synced');
+        } else {
+            syncElement.innerHTML = '<i class="fas fa-cloud-slash"></i> Syncing...';
+            syncElement.className = 'sync-indicator syncing';
+            console.log('🔄 Sync status: Syncing...');
+        }
+    } else {
+        console.log('❌ Sync status element not found');
+    }
 }
 
 // Add CSS for notifications if not in style.css
 function addMissingStyles() {
     if (!document.querySelector('#notification-styles')) {
+        console.log('🎨 Adding notification styles...');
+        
         const style = document.createElement('style');
         style.id = 'notification-styles';
         style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
             .notification {
                 position: fixed;
                 top: 20px;
@@ -480,184 +594,43 @@ function addMissingStyles() {
                 background: linear-gradient(135deg, #4ecdc4, #44aaff);
                 border-left: 5px solid #3388ff;
             }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-            
-            .sync-status {
-                margin-top: 10px;
-            }
-            
-            .sync-indicator {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-size: 0.9rem;
-                font-weight: bold;
-                background: var(--pastel-blue);
-                color: var(--dark-green);
-                border: 2px solid var(--pastel-blue);
-                animation: pulse 2s infinite;
-            }
-            
-            .sync-indicator.synced {
-                background: var(--pastel-green);
-                color: var(--dark-green);
-                border-color: var(--dark-green);
-            }
-            
-            .sync-indicator.syncing {
-                background: var(--pastel-yellow);
-                color: #b8860b;
-                border-color: #b8860b;
-            }
-            
-            .sync-indicator.local {
-                background: var(--pastel-purple);
-                color: #6a5acd;
-                border-color: #6a5acd;
-            }
-            
-            .quick-actions {
-                display: flex;
-                gap: 10px;
-                margin-top: 15px;
-            }
-            
-            .secondary-btn {
-                padding: 10px 15px;
-                background: var(--pastel-purple);
-                border: 2px solid var(--pastel-blue);
-                border-radius: 12px;
-                color: var(--text);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 0.9rem;
-                flex: 1;
-                justify-content: center;
-            }
-            
-            .secondary-btn:hover {
-                background: var(--pastel-blue);
-                transform: translateY(-2px);
-            }
-            
-            .cloud-badge {
-                background: var(--pastel-green);
-                color: var(--dark-green);
-                padding: 2px 8px;
-                border-radius: 10px;
-                font-size: 0.7rem;
-                margin-left: 5px;
-            }
-            
-            .footer-info {
-                margin-left: 15px;
-                font-size: 0.9rem;
-                color: var(--dark-pink);
-            }
-            
-            .todo-meta {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-top: 8px;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-            
-            .todo-date {
-                font-size: 0.75rem;
-                color: #888;
-            }
-            
-            .todo-checkbox {
-                width: 22px;
-                height: 22px;
-                cursor: pointer;
-                accent-color: var(--dark-green);
-            }
-            
-            .todo-checkbox:hover {
-                transform: scale(1.1);
-                transition: transform 0.2s;
-            }
-            
-            .filter-btn.active {
-                background: var(--pastel-green);
-                border-color: var(--dark-green);
-                color: var(--dark-green);
-                box-shadow: 0 0 10px rgba(119, 221, 119, 0.3);
-                font-weight: bold;
-            }
         `;
         document.head.appendChild(style);
+        console.log('✅ Notification styles added');
     }
 }
 
 // Initialize missing styles
 addMissingStyles();
 
-// Test function to add sample tasks
-async function addSampleTasks() {
-    const sampleTasks = [
-        { task: "Buy carrots for bunny 🥕", category: "shopping", completed: false },
-        { task: "Finish coding project 💻", category: "work", completed: true },
-        { task: "Go for a morning run 🏃‍♀️", category: "health", completed: false },
-        { task: "Water the plants 🌱", category: "personal", completed: false },
-        { task: "Plan weekend getaway ✈️", category: "personal", completed: true }
-    ];
-    
-    for (const sample of sampleTasks) {
-        await firebaseService.addTodo(sample);
-    }
-    
-    showNotification('Added sample tasks to Firebase!', 'success');
-}
-
-// Export for debugging
+// Debug functions
 window.todoApp = {
-    getTodos: () => todos,
-    addSampleTasks: addSampleTasks,
-    importFromLocalStorage: importFromLocalStorage,
-    exportTodos: exportTodos,
-    clearAll: async () => {
-        if (confirm('Clear ALL tasks from Firebase? This cannot be undone.')) {
-            // Note: In production, you'd want to delete all documents
-            showNotification('Clear feature disabled in demo', 'warning');
-        }
+    getTodos: () => {
+        console.log('📊 Current todos:', todos);
+        return todos;
+    },
+    getFirebaseStatus: () => {
+        console.log('🔥 Firebase status check');
+        return {
+            firebase: typeof firebase !== 'undefined',
+            firestore: typeof firebase.firestore !== 'undefined',
+            todos: todos.length,
+            deviceId: localStorage.getItem('bunny_device_id')
+        };
+    },
+    clearLocalStorage: () => {
+        localStorage.removeItem('bunny-todos');
+        localStorage.removeItem('bunny_device_id');
+        console.log('🧹 LocalStorage cleared');
+        location.reload();
     }
 };
 
-// Add a welcome message
+// Initial welcome message
 setTimeout(() => {
-    console.log('✅ Todo app loaded with Firebase!');
-    console.log('📝 Available commands:');
-    console.log('   - todoApp.addSampleTasks()');
-    console.log('   - todoApp.importFromLocalStorage()');
-    console.log('   - todoApp.exportTodos()');
+    console.log('✅ Bunny Todo App ready!');
+    console.log('🔍 Available debug commands:');
+    console.log('   - todoApp.getTodos()');
+    console.log('   - todoApp.getFirebaseStatus()');
+    console.log('   - todoApp.clearLocalStorage()');
 }, 1000);
