@@ -1,4 +1,4 @@
-// script.js - COMPLETE WORKING VERSION
+// script.js - COMPLETE CORRECTED VERSION
 // Bunny See, Bunny Do Todo App - Frontend Only
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -79,27 +79,51 @@ function addTodo() {
     createConfetti(15);
 }
 
-// Toggle todo completion
-function toggleTodo(id) {
+// Toggle todo completion - FIXED VERSION
+function toggleTodo(event) {
+    const checkbox = event.target;
+    const todoItem = checkbox.closest('.todo-item');
+    
+    if (!todoItem) return;
+    
+    const id = parseFloat(todoItem.dataset.id);
     const todo = todos.find(t => t.id === id);
-    if (todo) {
-        todo.completed = !todo.completed;
-        saveTodos();
-        renderTodos();
-        updateProgress();
-        
-        const status = todo.completed ? 'completed 🎉' : 'pending';
-        showNotification(`Task marked as ${status}!`, 'success');
-        
-        if (todo.completed) {
-            createConfetti(10);
-        }
+    
+    if (!todo) return;
+    
+    // Toggle completed status
+    todo.completed = !todo.completed;
+    
+    // Update the todo item class for visual feedback
+    if (todo.completed) {
+        todoItem.classList.add('completed');
+    } else {
+        todoItem.classList.remove('completed');
+    }
+    
+    // Save and update progress
+    saveTodos();
+    updateProgress();
+    
+    const status = todo.completed ? 'completed 🎉' : 'pending';
+    showNotification(`Task marked as ${status}!`, 'success');
+    
+    if (todo.completed) {
+        createConfetti(10);
     }
 }
 
 // Delete todo
-function deleteTodo(id) {
+function deleteTodo(event) {
+    const deleteBtn = event.target.closest('.delete-btn');
+    if (!deleteBtn) return;
+    
+    const todoItem = deleteBtn.closest('.todo-item');
+    if (!todoItem) return;
+    
+    const id = parseFloat(todoItem.dataset.id);
     const todo = todos.find(t => t.id === id);
+    
     if (!todo) return;
     
     if (!confirm(`Delete "${todo.task.substring(0, 20)}${todo.task.length > 20 ? '...' : ''}"?`)) {
@@ -114,7 +138,7 @@ function deleteTodo(id) {
     showNotification('Task deleted! 🗑️', 'success');
 }
 
-// Render todos to the screen
+// Render todos to the screen - FIXED VERSION
 function renderTodos() {
     const filteredTodos = filterTodos();
     
@@ -147,20 +171,16 @@ function renderTodos() {
         </div>
     `).join('');
 
-    // Add event listeners to the new elements
-    document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
-        const todoItem = checkbox.closest('.todo-item');
-        if (todoItem) {
-            const id = todoItem.dataset.id;
-            checkbox.addEventListener('change', () => toggleTodo(id));
+    // Add event listeners using event delegation
+    todoList.addEventListener('change', (event) => {
+        if (event.target.classList.contains('todo-checkbox')) {
+            toggleTodo(event);
         }
     });
 
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-        const todoItem = btn.closest('.todo-item');
-        if (todoItem) {
-            const id = todoItem.dataset.id;
-            btn.addEventListener('click', () => deleteTodo(id));
+    todoList.addEventListener('click', (event) => {
+        if (event.target.closest('.delete-btn')) {
+            deleteTodo(event);
         }
     });
 }
@@ -405,6 +425,28 @@ function addMissingStyles() {
                 font-size: 0.75rem;
                 color: #888;
             }
+            
+            /* Make checkboxes more clickable */
+            .todo-checkbox {
+                width: 22px;
+                height: 22px;
+                cursor: pointer;
+                accent-color: #77dd77;
+            }
+            
+            .todo-checkbox:hover {
+                transform: scale(1.1);
+                transition: transform 0.2s;
+            }
+            
+            /* Filter button active state */
+            .filter-btn.active {
+                background: var(--pastel-green);
+                border-color: var(--dark-green);
+                color: var(--dark-green);
+                box-shadow: 0 0 10px rgba(119, 221, 119, 0.3);
+                font-weight: bold;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -413,7 +455,35 @@ function addMissingStyles() {
 // Initialize missing styles
 addMissingStyles();
 
-// Export for debugging (optional)
+// Test function to add sample tasks
+function addSampleTasks() {
+    const sampleTasks = [
+        { task: "Buy carrots for bunny 🥕", category: "shopping", completed: false },
+        { task: "Finish coding project 💻", category: "work", completed: true },
+        { task: "Go for a morning run 🏃‍♀️", category: "health", completed: false },
+        { task: "Water the plants 🌱", category: "personal", completed: false },
+        { task: "Plan weekend getaway ✈️", category: "personal", completed: true }
+    ];
+    
+    sampleTasks.forEach((sample, index) => {
+        const newTodo = {
+            id: Date.now() + index,
+            task: sample.task,
+            category: sample.category,
+            completed: sample.completed,
+            created_at: new Date(Date.now() - index * 3600000).toISOString() // Staggered times
+        };
+        
+        todos.push(newTodo);
+    });
+    
+    saveTodos();
+    renderTodos();
+    updateProgress();
+    showNotification('Added sample tasks!', 'success');
+}
+
+// Export for debugging
 window.todoApp = {
     getTodos: () => todos,
     clearTodos: () => {
@@ -421,29 +491,22 @@ window.todoApp = {
         saveTodos();
         renderTodos();
         updateProgress();
+        showNotification('All tasks cleared!', 'info');
     },
-    addTestTask: () => {
-        const testTasks = [
-            { task: "Buy carrots for bunny 🥕", category: "shopping" },
-            { task: "Finish coding project 💻", category: "work" },
-            { task: "Go for a morning run 🏃‍♀️", category: "health" }
-        ];
-        
-        const randomTask = testTasks[Math.floor(Math.random() * testTasks.length)];
-        const newTodo = {
-            id: Date.now(),
-            task: randomTask.task,
-            category: randomTask.category,
-            completed: false,
-            created_at: new Date().toISOString()
-        };
-        
-        todos.unshift(newTodo);
-        saveTodos();
+    addSampleTasks: addSampleTasks,
+    reload: () => {
         renderTodos();
         updateProgress();
-        showNotification('Added test task!', 'success');
     }
 };
 
-console.log('🎯 Todo app loaded! Try: todoApp.addTestTask() in console');
+// Add a welcome message with sample tasks if empty
+setTimeout(() => {
+    if (todos.length === 0) {
+        console.log('🆕 No tasks found. Ready for first task!');
+        // Uncomment below if you want sample tasks added automatically
+        // addSampleTasks();
+    }
+}, 1000);
+
+console.log('✅ Todo app loaded! Try: todoApp.addSampleTasks() in console to test');
