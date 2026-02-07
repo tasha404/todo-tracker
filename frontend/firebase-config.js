@@ -1,7 +1,4 @@
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-
-// Firebase Configuration
+// Firebase Configuration - REPLACE WITH YOUR ACTUAL CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyBy-ZhH3pU2lWIiQDzyg1yKtzCw0SqAeHc",
   authDomain: "todo-tracker-fcd77.firebaseapp.com",
@@ -13,10 +10,15 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+try {
+    firebase.initializeApp(firebaseConfig);
+    console.log('🔥 Firebase initialized successfully');
+} catch (error) {
+    console.error('❌ Firebase initialization error:', error);
+}
 
-console.log('🔥 Firebase initialized successfully');
+const db = firebase.firestore();
+console.log('📊 Firestore database initialized');
 
 // Generate unique device ID for anonymous user
 function getDeviceId() {
@@ -24,6 +26,9 @@ function getDeviceId() {
     if (!deviceId) {
         deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('bunny_device_id', deviceId);
+        console.log('📱 Created new device ID:', deviceId);
+    } else {
+        console.log('📱 Using existing device ID:', deviceId);
     }
     return deviceId;
 }
@@ -38,38 +43,56 @@ function getTodoCollection() {
 const firebaseService = {
     // Subscribe to todos with real-time updates
     subscribeToTodos: (callback) => {
+        console.log('👂 Subscribing to todos...');
         const todosCollection = getTodoCollection();
+        
         return todosCollection.orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+            console.log('📡 Firestore snapshot received:', snapshot.size, 'items');
+            
             const todos = [];
             snapshot.forEach((doc) => {
+                const data = doc.data();
+                console.log('📝 Todo data:', data);
                 todos.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...data
                 });
             });
+            
             callback(todos);
         }, (error) => {
-            console.error('Error subscribing to todos:', error);
+            console.error('❌ Error subscribing to todos:', error);
+            console.error('Error details:', error.code, error.message);
             showNotification('Connection error. Using local storage.', 'warning');
+            
             // Fallback to localStorage
             const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
+            console.log('📂 Fallback to localStorage:', localTodos.length, 'items');
             callback(localTodos);
         });
     },
 
     // Add new todo
     addTodo: async (todo) => {
+        console.log('➕ Adding todo:', todo);
         try {
             const todosCollection = getTodoCollection();
-            const docRef = await todosCollection.add({
+            const todoData = {
                 ...todo,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                 deviceId: getDeviceId()
-            });
+            };
+            
+            console.log('📤 Sending to Firestore:', todoData);
+            const docRef = await todosCollection.add(todoData);
+            console.log('✅ Todo added with ID:', docRef.id);
+            
             return { success: true, id: docRef.id };
         } catch (error) {
-            console.error('Error adding todo:', error);
+            console.error('❌ Error adding todo:', error);
+            console.error('Error details:', error.code, error.message);
+            
             // Fallback to localStorage
             const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
             const newTodo = {
@@ -79,27 +102,33 @@ const firebaseService = {
             };
             localTodos.unshift(newTodo);
             localStorage.setItem('bunny-todos', JSON.stringify(localTodos));
+            console.log('💾 Saved to localStorage:', newTodo);
+            
             return { success: true, id: newTodo.id, isLocal: true };
         }
     },
 
     // Update todo (toggle completion)
     updateTodo: async (todoId, updates) => {
+        console.log('🔄 Updating todo:', todoId, updates);
         try {
             const todosCollection = getTodoCollection();
             await todosCollection.doc(todoId).update({
                 ...updates,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            console.log('✅ Todo updated:', todoId);
             return { success: true };
         } catch (error) {
-            console.error('Error updating todo:', error);
+            console.error('❌ Error updating todo:', error);
+            
             // Fallback to localStorage
             const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
             const index = localTodos.findIndex(t => t.id === todoId);
             if (index !== -1) {
                 localTodos[index] = { ...localTodos[index], ...updates };
                 localStorage.setItem('bunny-todos', JSON.stringify(localTodos));
+                console.log('💾 Updated in localStorage:', todoId);
             }
             return { success: true, isLocal: true };
         }
@@ -107,103 +136,21 @@ const firebaseService = {
 
     // Delete todo
     deleteTodo: async (todoId) => {
+        console.log('🗑️ Deleting todo:', todoId);
         try {
             const todosCollection = getTodoCollection();
             await todosCollection.doc(todoId).delete();
+            console.log('✅ Todo deleted:', todoId);
             return { success: true };
         } catch (error) {
-            console.error('Error deleting todo:', error);
+            console.error('❌ Error deleting todo:', error);
+            
             // Fallback to localStorage
             const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
             const filteredTodos = localTodos.filter(t => t.id !== todoId);
             localStorage.setItem('bunny-todos', JSON.stringify(filteredTodos));
+            console.log('💾 Deleted from localStorage:', todoId);
             return { success: true, isLocal: true };
-        }
-    },
-
-    // Import from localStorage to Firebase
-    importFromLocalStorage: async () => {
-        const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
-        if (localTodos.length === 0) {
-            return { success: false, message: 'No local tasks found' };
-        }
-
-        try {
-            const todosCollection = getTodoCollection();
-            const batch = db.batch();
-            
-            // Get existing todos to avoid duplicates
-            const snapshot = await todosCollection.get();
-            const existingIds = new Set(snapshot.docs.map(doc => doc.data().originalId));
-            
-            let importedCount = 0;
-            
-            for (const todo of localTodos) {
-                // Skip if already imported
-                if (existingIds.has(todo.id)) continue;
-                
-                const newDocRef = todosCollection.doc();
-                batch.set(newDocRef, {
-                    task: todo.task,
-                    category: todo.category,
-                    completed: todo.completed,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    deviceId: getDeviceId(),
-                    originalId: todo.id // Keep reference to original ID
-                });
-                importedCount++;
-            }
-            
-            if (importedCount > 0) {
-                await batch.commit();
-                localStorage.removeItem('bunny-todos'); // Clear local after successful import
-            }
-            
-            return { 
-                success: true, 
-                importedCount,
-                message: `Imported ${importedCount} tasks to Firebase` 
-            };
-        } catch (error) {
-            console.error('Error importing from localStorage:', error);
-            return { success: false, message: 'Import failed' };
-        }
-    },
-
-    // Export todos as JSON backup
-    exportTodos: async () => {
-        try {
-            const todosCollection = getTodoCollection();
-            const snapshot = await todosCollection.get();
-            const todos = [];
-            
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                todos.push({
-                    id: doc.id,
-                    task: data.task,
-                    category: data.category,
-                    completed: data.completed,
-                    createdAt: data.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
-                    deviceId: data.deviceId
-                });
-            });
-            
-            const dataStr = JSON.stringify(todos, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            
-            const exportFileDefaultName = `bunny-todos-backup-${new Date().toISOString().split('T')[0]}.json`;
-            
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
-            
-            return { success: true, count: todos.length };
-        } catch (error) {
-            console.error('Error exporting todos:', error);
-            return { success: false, message: 'Export failed' };
         }
     }
 };
@@ -225,5 +172,62 @@ function updateSyncStatus(isSynced = true, isLocal = false) {
     }
 }
 
+// Show notification (for firebase-config.js)
+function showNotification(message, type = 'info') {
+    console.log('📢 Notification:', message, type);
+    
+    // Remove existing notification
+    const existingNotification = document.querySelector('.notification');
+    if (existingNotification) existingNotification.remove();
+
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle'
+    };
+    
+    notification.innerHTML = `
+        <i class="fas fa-${icons[type] || 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Add animation
+    notification.style.animation = 'slideIn 0.5s ease';
+    
+    // Auto remove
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) notification.parentNode.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
 // Initialize sync status
 updateSyncStatus(true);
+
+// Test Firestore connection
+async function testFirestoreConnection() {
+    try {
+        const testCollection = db.collection('test');
+        const docRef = await testCollection.add({ test: true, timestamp: new Date() });
+        await docRef.delete();
+        console.log('✅ Firestore connection test successful');
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore connection test failed:', error);
+        return false;
+    }
+}
+
+// Run connection test on load
+setTimeout(() => {
+    testFirestoreConnection();
+}, 1000);
