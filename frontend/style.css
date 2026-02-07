@@ -90,8 +90,8 @@ body {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(180deg); }
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
 }
 
 /* Header */
@@ -226,12 +226,8 @@ h2 {
 
 h2 i {
     color: var(--dark-pink);
-    animation: spinSlow 10s linear infinite;
-}
-
-@keyframes spinSlow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    /* 移除了旋转动画 */
+    animation: none;
 }
 
 /* Progress Circle */
@@ -648,7 +644,7 @@ h2 i {
 .edit-btn:hover {
     background: var(--dark-green);
     color: white;
-    transform: rotate(15deg) scale(1.1);
+    transform: scale(1.1);
 }
 
 .delete-btn {
@@ -689,8 +685,8 @@ h2 i {
 }
 
 @keyframes floatEmpty {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(5deg); }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
 }
 
 .empty-state h3 {
@@ -802,11 +798,11 @@ footer i {
 
 @keyframes confettiFall {
     0% {
-        transform: translateY(-100px) rotate(0deg);
+        transform: translateY(-100px);
         opacity: 1;
     }
     100% {
-        transform: translateY(1000px) rotate(720deg);
+        transform: translateY(1000px);
         opacity: 0;
     }
 }
