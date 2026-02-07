@@ -1,5 +1,15 @@
-const API_URL = 'http://localhost:5000/api';
+// script.js - COMPLETE WORKING VERSION
+// Bunny See, Bunny Do Todo App - Frontend Only
 
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🐰 Todo app initialized');
+    loadTodos();
+    setupEventListeners();
+    updateProgress();
+    showNotification('Welcome to Bunny Todo! 🎀', 'success', 2000);
+});
+
+// Store todos in browser's localStorage
 let todos = [];
 let currentFilter = 'all';
 
@@ -13,12 +23,6 @@ const percentageElement = document.querySelector('.percentage');
 const completedTasksElement = document.getElementById('completed-tasks');
 const totalTasksElement = document.getElementById('total-tasks');
 const progressBar = document.querySelector('.progress-bar');
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    fetchTodos();
-    setupEventListeners();
-});
 
 // Event Listeners
 function setupEventListeners() {
@@ -37,115 +41,87 @@ function setupEventListeners() {
     });
 }
 
-// Fetch todos from backend
-async function fetchTodos() {
-    try {
-        const response = await fetch(`${API_URL}/todos`);
-        if (!response.ok) throw new Error('Failed to fetch todos');
-        
-        todos = await response.json();
-        renderTodos();
-        updateProgress();
-    } catch (error) {
-        console.error('Error fetching todos:', error);
-        showNotification('Failed to load tasks', 'error');
-    }
-}
-
 // Add new todo
-async function addTodo() {
+function addTodo() {
     const task = newTaskInput.value.trim();
     const category = taskCategorySelect.value;
 
     if (!task) {
-        showNotification('Please enter a task!', 'warning');
+        showNotification('Please enter a task! 🌸', 'warning');
         newTaskInput.focus();
         return;
     }
 
-    try {
-        const response = await fetch(`${API_URL}/todos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                task: task,
-                category: category
-            }),
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            newTaskInput.value = '';
-            newTaskInput.focus();
-            fetchTodos();
-            showNotification('Task added successfully! ✨', 'success');
-        } else {
-            throw new Error(data.error || 'Failed to add task');
-        }
-    } catch (error) {
-        console.error('Error adding todo:', error);
-        showNotification(error.message, 'error');
+    if (task.length > 100) {
+        showNotification('Task is too long (max 100 characters)', 'warning');
+        return;
     }
+
+    // Create new todo
+    const newTodo = {
+        id: Date.now() + Math.random(), // Unique ID
+        task: task,
+        category: category,
+        completed: false,
+        created_at: new Date().toISOString()
+    };
+
+    // Add to todos array (at the beginning)
+    todos.unshift(newTodo);
+    saveTodos();
+    renderTodos();
+    updateProgress();
+
+    // Clear input and show success
+    newTaskInput.value = '';
+    newTaskInput.focus();
+    showNotification('Task added successfully! ✨', 'success');
+    createConfetti(15);
 }
 
 // Toggle todo completion
-async function toggleTodo(id, completed) {
-    try {
-        const response = await fetch(`${API_URL}/todos/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ completed: !completed }),
-        });
-
-        if (response.ok) {
-            fetchTodos();
-            const status = !completed ? 'completed' : 'pending';
-            showNotification(`Task marked as ${status}!`, 'success');
-        } else {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to update task');
+function toggleTodo(id) {
+    const todo = todos.find(t => t.id === id);
+    if (todo) {
+        todo.completed = !todo.completed;
+        saveTodos();
+        renderTodos();
+        updateProgress();
+        
+        const status = todo.completed ? 'completed 🎉' : 'pending';
+        showNotification(`Task marked as ${status}!`, 'success');
+        
+        if (todo.completed) {
+            createConfetti(10);
         }
-    } catch (error) {
-        console.error('Error updating todo:', error);
-        showNotification(error.message, 'error');
     }
 }
 
 // Delete todo
-async function deleteTodo(id) {
-    if (!confirm('Are you sure you want to delete this task? 🌸')) return;
-
-    try {
-        const response = await fetch(`${API_URL}/todos/${id}`, {
-            method: 'DELETE',
-        });
-
-        if (response.ok) {
-            fetchTodos();
-            showNotification('Task deleted successfully!', 'success');
-        } else {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to delete task');
-        }
-    } catch (error) {
-        console.error('Error deleting todo:', error);
-        showNotification(error.message, 'error');
+function deleteTodo(id) {
+    const todo = todos.find(t => t.id === id);
+    if (!todo) return;
+    
+    if (!confirm(`Delete "${todo.task.substring(0, 20)}${todo.task.length > 20 ? '...' : ''}"?`)) {
+        return;
     }
+    
+    todos = todos.filter(t => t.id !== id);
+    saveTodos();
+    renderTodos();
+    updateProgress();
+    
+    showNotification('Task deleted! 🗑️', 'success');
 }
 
-// Render todos
+// Render todos to the screen
 function renderTodos() {
     const filteredTodos = filterTodos();
     
     if (filteredTodos.length === 0) {
         todoList.innerHTML = `
             <div class="empty-state">
-                <i class="fas fa-clipboard-list"></i>
+                <i class="fas fa-clipboard-list fa-3x"></i>
                 <h3>No ${currentFilter !== 'all' ? currentFilter : ''} tasks!</h3>
                 <p>${currentFilter === 'all' ? 'Add your first task to get started 🌈' : 'Try changing the filter'}</p>
             </div>
@@ -158,29 +134,34 @@ function renderTodos() {
             <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
             <div class="todo-content">
                 <div class="todo-task">${escapeHtml(todo.task)}</div>
-                <span class="todo-category">${getCategoryIcon(todo.category)} ${todo.category}</span>
+                <div class="todo-meta">
+                    <span class="todo-category">${getCategoryIcon(todo.category)} ${todo.category}</span>
+                    <small class="todo-date">${formatDate(todo.created_at)}</small>
+                </div>
             </div>
             <div class="todo-actions">
-                <button class="todo-btn delete-btn" title="Delete">
+                <button class="todo-btn delete-btn" title="Delete" aria-label="Delete task">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         </div>
     `).join('');
 
-    // Add event listeners to checkboxes and delete buttons
-    document.querySelectorAll('.todo-checkbox').forEach((checkbox, index) => {
-        checkbox.addEventListener('change', () => {
-            const todo = filteredTodos[index];
-            toggleTodo(todo.id, Boolean(todo.completed));
-        });
+    // Add event listeners to the new elements
+    document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+        const todoItem = checkbox.closest('.todo-item');
+        if (todoItem) {
+            const id = todoItem.dataset.id;
+            checkbox.addEventListener('change', () => toggleTodo(id));
+        }
     });
 
-    document.querySelectorAll('.delete-btn').forEach((btn, index) => {
-        btn.addEventListener('click', () => {
-            const todo = filteredTodos[index];
-            deleteTodo(todo.id);
-        });
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        const todoItem = btn.closest('.todo-item');
+        if (todoItem) {
+            const id = todoItem.dataset.id;
+            btn.addEventListener('click', () => deleteTodo(id));
+        }
     });
 }
 
@@ -196,33 +177,54 @@ function filterTodos() {
     }
 }
 
-// Update progress tracker
-async function updateProgress() {
-    try {
-        const response = await fetch(`${API_URL}/progress`);
-        if (!response.ok) throw new Error('Failed to fetch progress');
-        
-        const data = await response.json();
-        
-        const progress = data.progress || 0;
-        const total = data.total || 0;
-        const completed = data.completed || 0;
-        
-        // Update progress circle
-        const circumference = 2 * Math.PI * 54;
-        const offset = circumference - (progress / 100) * circumference;
+// Update progress circle and stats
+function updateProgress() {
+    const total = todos.length;
+    const completed = todos.filter(todo => todo.completed).length;
+    const progress = total > 0 ? (completed / total) * 100 : 0;
+    
+    // Update progress circle animation
+    const circumference = 2 * Math.PI * 54;
+    const offset = circumference - (progress / 100) * circumference;
+    
+    if (progressBar) {
         progressBar.style.strokeDasharray = `${circumference} ${circumference}`;
         progressBar.style.strokeDashoffset = offset;
-        
-        // Update text
-        percentageElement.textContent = `${progress}%`;
-        completedTasksElement.textContent = completed;
-        totalTasksElement.textContent = total;
-        
-        // Update progress text
-        document.querySelector('.completed').textContent = `${completed}/${total} completed`;
+    }
+    
+    // Update text displays
+    if (percentageElement) percentageElement.textContent = `${Math.round(progress)}%`;
+    if (completedTasksElement) completedTasksElement.textContent = completed;
+    if (totalTasksElement) totalTasksElement.textContent = total;
+    
+    const completedElement = document.querySelector('.completed');
+    if (completedElement) completedElement.textContent = `${completed}/${total} completed`;
+}
+
+// Save todos to localStorage
+function saveTodos() {
+    try {
+        localStorage.setItem('bunny-todos', JSON.stringify(todos));
+        console.log('💾 Saved todos to localStorage:', todos.length, 'items');
     } catch (error) {
-        console.error('Error fetching progress:', error);
+        console.error('❌ Error saving to localStorage:', error);
+        showNotification('Error saving tasks!', 'error');
+    }
+}
+
+// Load todos from localStorage
+function loadTodos() {
+    try {
+        const saved = localStorage.getItem('bunny-todos');
+        if (saved) {
+            todos = JSON.parse(saved);
+            console.log('📂 Loaded todos from localStorage:', todos.length, 'items');
+            renderTodos();
+            updateProgress();
+        }
+    } catch (error) {
+        console.error('❌ Error loading from localStorage:', error);
+        todos = [];
     }
 }
 
@@ -235,93 +237,75 @@ function getCategoryIcon(category) {
         'shopping': '🛍️',
         'health': '🏃‍♀️'
     };
-    return icons[category] || '📝';
+    return icons[category] || '📌';
 }
 
-function showNotification(message, type) {
+function formatDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+        });
+    } catch (error) {
+        return '';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Show notification
+function showNotification(message, type = 'info', duration = 3000) {
     // Remove existing notification
     const existingNotification = document.querySelector('.notification');
-    if (existingNotification) {
-        existingNotification.remove();
-    }
+    if (existingNotification) existingNotification.remove();
 
+    // Create new notification
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle'
+    };
+    
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <i class="fas fa-${icons[type] || 'info-circle'}"></i>
         <span>${message}</span>
     `;
     
     document.body.appendChild(notification);
     
-    // Add notification styles if not already added
-    if (!document.querySelector('#notification-styles')) {
-        const style = document.createElement('style');
-        style.id = 'notification-styles';
-        style.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                border-radius: 15px;
-                color: white;
-                font-weight: bold;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                z-index: 1000;
-                animation: slideIn 0.3s ease;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-                min-width: 300px;
-            }
-            .notification.success {
-                background: linear-gradient(135deg, var(--dark-green), #4CAF50);
-                border-left: 5px solid #2E7D32;
-            }
-            .notification.error {
-                background: linear-gradient(135deg, #ff6b6b, #ff4757);
-                border-left: 5px solid #c62828;
-            }
-            .notification.warning {
-                background: linear-gradient(135deg, #ffd166, #ff9e00);
-                border-left: 5px solid #ef6c00;
-            }
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            @keyframes slideOut {
-                from {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
+    // Add animation
+    notification.style.animation = 'slideIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
     
-    // Auto remove after 3 seconds
+    // Auto remove
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
+            if (notification.parentNode) notification.parentNode.removeChild(notification);
         }, 300);
-    }, 3000);
+    }, duration);
 }
 
+// Create confetti effect
 function createConfetti(count = 50) {
     const colors = ['#ffd6e7', '#d4f1d4', '#e6e6fa', '#fffacd', '#d4f4ff'];
     
@@ -338,152 +322,128 @@ function createConfetti(count = 50) {
         
         // Remove after animation
         setTimeout(() => {
-            if (confetti.parentNode) {
-                confetti.parentNode.removeChild(confetti);
-            }
+            if (confetti.parentNode) confetti.parentNode.removeChild(confetti);
         }, 3000);
     }
 }
 
-// Enhanced showNotification function with more animations
-function showNotification(message, type) {
-    // Remove existing notification
-    const existingNotification = document.querySelector('.notification');
-    if (existingNotification) {
-        existingNotification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (existingNotification.parentNode) {
-                existingNotification.parentNode.removeChild(existingNotification);
+// Add CSS for notifications if not in style.css
+function addMissingStyles() {
+    if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 12px;
+                color: white;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                z-index: 1000;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                max-width: 300px;
+                animation: slideIn 0.5s ease;
             }
-        }, 300);
-    }
-
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Trigger confetti for success notifications
-    if (type === 'success') {
-        setTimeout(() => createConfetti(20), 300);
-    }
-    
-    // Add bounce animation
-    notification.style.animation = 'slideIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
-    
-    // Auto remove after 3 seconds
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Add loading animation for async operations
-function showLoading(element) {
-    const originalHTML = element.innerHTML;
-    element.innerHTML = '<div class="loading-spinner"></div>';
-    element.disabled = true;
-    return originalHTML;
-}
-
-function hideLoading(element, originalHTML) {
-    element.innerHTML = originalHTML;
-    element.disabled = false;
-}
-
-// Enhanced addTodo with loading state
-async function addTodo() {
-    const task = newTaskInput.value.trim();
-    const category = taskCategorySelect.value;
-
-    if (!task) {
-        showNotification('Please enter a task! 🌸', 'warning');
-        newTaskInput.focus();
-        return;
-    }
-
-    const originalButtonHTML = showLoading(addBtn);
-    
-    try {
-        const response = await fetch(`${API_URL}/todos`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                task: task,
-                category: category
-            }),
-        });
-
-        const data = await response.json();
-        
-        if (response.ok) {
-            newTaskInput.value = '';
-            newTaskInput.focus();
-            // Add a nice visual effect
-            taskCategorySelect.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                taskCategorySelect.style.transform = 'scale(1)';
-            }, 300);
             
-            fetchTodos();
-            showNotification('Task added successfully! ✨', 'success');
-        } else {
-            throw new Error(data.error || 'Failed to add task');
-        }
-    } catch (error) {
-        console.error('Error adding todo:', error);
-        showNotification(error.message, 'error');
-    } finally {
-        hideLoading(addBtn, originalButtonHTML);
+            .notification.success {
+                background: linear-gradient(135deg, #77dd77, #55aa55);
+                border-left: 5px solid #44aa44;
+            }
+            
+            .notification.error {
+                background: linear-gradient(135deg, #ff6b6b, #ff4444);
+                border-left: 5px solid #dd3333;
+            }
+            
+            .notification.warning {
+                background: linear-gradient(135deg, #ffd166, #ffb347);
+                border-left: 5px solid #ff9500;
+            }
+            
+            .notification.info {
+                background: linear-gradient(135deg, #4ecdc4, #44aaff);
+                border-left: 5px solid #3388ff;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .todo-meta {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 8px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .todo-date {
+                font-size: 0.75rem;
+                color: #888;
+            }
+        `;
+        document.head.appendChild(style);
     }
 }
 
-// Enhanced deleteTodo with better animations
-async function deleteTodo(id) {
-    const todoItem = document.querySelector(`.todo-item[data-id="${id}"]`);
-    
-    if (todoItem) {
-        todoItem.style.animation = 'slideOut 0.3s ease';
-        todoItem.style.transformOrigin = 'left';
+// Initialize missing styles
+addMissingStyles();
+
+// Export for debugging (optional)
+window.todoApp = {
+    getTodos: () => todos,
+    clearTodos: () => {
+        todos = [];
+        saveTodos();
+        renderTodos();
+        updateProgress();
+    },
+    addTestTask: () => {
+        const testTasks = [
+            { task: "Buy carrots for bunny 🥕", category: "shopping" },
+            { task: "Finish coding project 💻", category: "work" },
+            { task: "Go for a morning run 🏃‍♀️", category: "health" }
+        ];
+        
+        const randomTask = testTasks[Math.floor(Math.random() * testTasks.length)];
+        const newTodo = {
+            id: Date.now(),
+            task: randomTask.task,
+            category: randomTask.category,
+            completed: false,
+            created_at: new Date().toISOString()
+        };
+        
+        todos.unshift(newTodo);
+        saveTodos();
+        renderTodos();
+        updateProgress();
+        showNotification('Added test task!', 'success');
     }
-    
-    setTimeout(async () => {
-        try {
-            const response = await fetch(`${API_URL}/todos/${id}`, {
-                method: 'DELETE',
-            });
+};
 
-            if (response.ok) {
-                fetchTodos();
-                showNotification('Task deleted successfully! 🗑️', 'success');
-            } else {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to delete task');
-            }
-        } catch (error) {
-            console.error('Error deleting todo:', error);
-            showNotification(error.message, 'error');
-            // Restore animation if error
-            if (todoItem) {
-                todoItem.style.animation = 'todoAppear 0.5s ease';
-            }
-        }
-    }, 300);
-}
-
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+console.log('🎯 Todo app loaded! Try: todoApp.addTestTask() in console');
