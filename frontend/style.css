@@ -1047,3 +1047,82 @@ footer i {
 :focus:not(:focus-visible) {
     outline: none;
 }
+
+/* Add these to your existing style.css */
+
+/* Sync Status */
+.sync-status {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    background: var(--pastel-blue);
+    color: var(--dark-green);
+    border: 2px solid var(--pastel-blue);
+    animation: pulse 2s infinite;
+}
+
+.sync-indicator.synced {
+    background: var(--pastel-green);
+    color: var(--dark-green);
+    border-color: var(--dark-green);
+}
+
+.sync-indicator.syncing {
+    background: var(--pastel-yellow);
+    color: #b8860b;
+    border-color: #b8860b;
+    animation: pulse 1s infinite;
+}
+
+.sync-indicator.local {
+    background: var(--pastel-purple);
+    color: #6a5acd;
+    border-color: #6a5acd;
+}
+
+/* Cloud Badge */
+.cloud-badge {
+    background: var(--pastel-green);
+    color: var(--dark-green);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-left: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Footer Info */
+.footer-info {
+    margin-left: 15px;
+    font-size: 0.9rem;
+    color: var(--dark-blue);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 12px;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 1000;
+    box-shadow: 0 4
