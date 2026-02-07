@@ -1,17 +1,15 @@
-// script.js - COMPLETE CORRECTED VERSION
-// Bunny See, Bunny Do Todo App - Frontend Only
+// script.js - Firebase-Enabled Todo App
+// Bunny See, Bunny Do Todo App - Now with Firebase Firestore
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🐰 Todo app initialized');
-    loadTodos();
-    setupEventListeners();
-    updateProgress();
-    showNotification('Welcome to Bunny Todo! 🎀', 'success', 2000);
+    console.log('🐰 Todo app initialized with Firebase');
+    initializeApp();
 });
 
-// Store todos in browser's localStorage
+// Global variables
 let todos = [];
 let currentFilter = 'all';
+let unsubscribeFromFirebase = null;
 
 // DOM Elements
 const todoList = document.getElementById('todo-list');
@@ -23,6 +21,18 @@ const percentageElement = document.querySelector('.percentage');
 const completedTasksElement = document.getElementById('completed-tasks');
 const totalTasksElement = document.getElementById('total-tasks');
 const progressBar = document.querySelector('.progress-bar');
+const importLocalBtn = document.getElementById('import-local');
+const exportBtn = document.getElementById('export-btn');
+
+// Initialize app
+function initializeApp() {
+    setupEventListeners();
+    startFirebaseListener();
+    showNotification('Welcome to Bunny Todo! 🎀 Cloud sync enabled!', 'success', 2000);
+    
+    // Check for local storage migration
+    checkForLocalData();
+}
 
 // Event Listeners
 function setupEventListeners() {
@@ -39,10 +49,58 @@ function setupEventListeners() {
             renderTodos();
         });
     });
+    
+    // Import/Export buttons
+    if (importLocalBtn) {
+        importLocalBtn.addEventListener('click', importFromLocalStorage);
+    }
+    
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportTodos);
+    }
+}
+
+// Start Firebase real-time listener
+function startFirebaseListener() {
+    unsubscribeFromFirebase = firebaseService.subscribeToTodos((firestoreTodos) => {
+        // Convert Firestore timestamps to regular dates
+        const processedTodos = firestoreTodos.map(todo => {
+            let createdAt = todo.createdAt;
+            if (createdAt && typeof createdAt.toDate === 'function') {
+                createdAt = createdAt.toDate().toISOString();
+            } else if (!createdAt) {
+                createdAt = new Date().toISOString();
+            }
+            
+            return {
+                ...todo,
+                created_at: createdAt,
+                // For compatibility with existing code
+                id: todo.id || todo.originalId || Date.now() + Math.random()
+            };
+        });
+        
+        todos = processedTodos;
+        renderTodos();
+        updateProgress();
+        updateSyncStatus(true);
+    });
+}
+
+// Check for local data and offer import
+function checkForLocalData() {
+    const localTodos = JSON.parse(localStorage.getItem('bunny-todos')) || [];
+    if (localTodos.length > 0) {
+        setTimeout(() => {
+            if (confirm(`Found ${localTodos.length} tasks in local storage. Import to Firebase for cloud sync?`)) {
+                importFromLocalStorage();
+            }
+        }, 1500);
+    }
 }
 
 // Add new todo
-function addTodo() {
+async function addTodo() {
     const task = newTaskInput.value.trim();
     const category = taskCategorySelect.value;
 
@@ -57,71 +115,93 @@ function addTodo() {
         return;
     }
 
-    // Create new todo
     const newTodo = {
-        id: Date.now() + Math.random(), // Unique ID
         task: task,
         category: category,
-        completed: false,
-        created_at: new Date().toISOString()
+        completed: false
     };
 
-    // Add to todos array (at the beginning)
-    todos.unshift(newTodo);
-    saveTodos();
-    renderTodos();
-    updateProgress();
-
-    // Clear input and show success
-    newTaskInput.value = '';
-    newTaskInput.focus();
-    showNotification('Task added successfully! ✨', 'success');
-    createConfetti(15);
+    updateSyncStatus(false);
+    
+    const result = await firebaseService.addTodo(newTodo);
+    
+    if (result.success) {
+        // Clear input
+        newTaskInput.value = '';
+        newTaskInput.focus();
+        
+        // Show success notification
+        if (result.isLocal) {
+            showNotification('Task added (saved locally) ✨', 'info');
+        } else {
+            showNotification('Task added to cloud! ✨', 'success');
+            createConfetti(15);
+        }
+    } else {
+        showNotification('Failed to add task 😢', 'error');
+    }
 }
 
-// Toggle todo completion - FIXED VERSION
-function toggleTodo(event) {
+// Toggle todo completion
+async function toggleTodo(event) {
     const checkbox = event.target;
     const todoItem = checkbox.closest('.todo-item');
     
     if (!todoItem) return;
     
-    const id = parseFloat(todoItem.dataset.id);
+    const id = todoItem.dataset.id;
     const todo = todos.find(t => t.id === id);
     
     if (!todo) return;
     
-    // Toggle completed status
-    todo.completed = !todo.completed;
+    const newCompletedState = !todo.completed;
     
-    // Update the todo item class for visual feedback
-    if (todo.completed) {
+    // Update UI immediately for better UX
+    if (newCompletedState) {
         todoItem.classList.add('completed');
     } else {
         todoItem.classList.remove('completed');
     }
     
-    // Save and update progress
-    saveTodos();
-    updateProgress();
+    checkbox.checked = newCompletedState;
     
-    const status = todo.completed ? 'completed 🎉' : 'pending';
-    showNotification(`Task marked as ${status}!`, 'success');
+    updateSyncStatus(false);
     
-    if (todo.completed) {
-        createConfetti(10);
+    // Update in Firebase
+    const result = await firebaseService.updateTodo(id, { completed: newCompletedState });
+    
+    if (result.success) {
+        const status = newCompletedState ? 'completed 🎉' : 'pending';
+        showNotification(`Task marked as ${status}!`, 'success');
+        
+        if (newCompletedState) {
+            createConfetti(10);
+        }
+        
+        if (result.isLocal) {
+            showNotification('Saved locally (offline)', 'info');
+        }
+    } else {
+        // Revert UI if update failed
+        checkbox.checked = !newCompletedState;
+        if (newCompletedState) {
+            todoItem.classList.remove('completed');
+        } else {
+            todoItem.classList.add('completed');
+        }
+        showNotification('Failed to update task', 'error');
     }
 }
 
 // Delete todo
-function deleteTodo(event) {
+async function deleteTodo(event) {
     const deleteBtn = event.target.closest('.delete-btn');
     if (!deleteBtn) return;
     
     const todoItem = deleteBtn.closest('.todo-item');
     if (!todoItem) return;
     
-    const id = parseFloat(todoItem.dataset.id);
+    const id = todoItem.dataset.id;
     const todo = todos.find(t => t.id === id);
     
     if (!todo) return;
@@ -130,15 +210,50 @@ function deleteTodo(event) {
         return;
     }
     
-    todos = todos.filter(t => t.id !== id);
-    saveTodos();
-    renderTodos();
-    updateProgress();
+    updateSyncStatus(false);
     
-    showNotification('Task deleted! 🗑️', 'success');
+    const result = await firebaseService.deleteTodo(id);
+    
+    if (result.success) {
+        showNotification('Task deleted! 🗑️', 'success');
+        if (result.isLocal) {
+            showNotification('Deleted from local storage', 'info');
+        }
+    } else {
+        showNotification('Failed to delete task', 'error');
+    }
 }
 
-// Render todos to the screen - FIXED VERSION
+// Import from localStorage to Firebase
+async function importFromLocalStorage() {
+    updateSyncStatus(false);
+    
+    const result = await firebaseService.importFromLocalStorage();
+    
+    if (result.success) {
+        if (result.importedCount > 0) {
+            showNotification(`Imported ${result.importedCount} tasks to Firebase! 🚀`, 'success');
+            createConfetti(20);
+        } else {
+            showNotification('All tasks already synced to Firebase! ✅', 'info');
+        }
+    } else {
+        showNotification(result.message || 'Import failed', 'error');
+    }
+}
+
+// Export todos
+async function exportTodos() {
+    const result = await firebaseService.exportTodos();
+    
+    if (result.success) {
+        showNotification(`Exported ${result.count} tasks to JSON file 📁`, 'success');
+    } else {
+        showNotification(result.message || 'Export failed', 'error');
+    }
+}
+
+// Render todos to the screen
 function renderTodos() {
     const filteredTodos = filterTodos();
     
@@ -161,6 +276,7 @@ function renderTodos() {
                 <div class="todo-meta">
                     <span class="todo-category">${getCategoryIcon(todo.category)} ${todo.category}</span>
                     <small class="todo-date">${formatDate(todo.created_at)}</small>
+                    ${todo.deviceId ? '<small class="cloud-badge"><i class="fas fa-cloud"></i></small>' : ''}
                 </div>
             </div>
             <div class="todo-actions">
@@ -221,33 +337,6 @@ function updateProgress() {
     if (completedElement) completedElement.textContent = `${completed}/${total} completed`;
 }
 
-// Save todos to localStorage
-function saveTodos() {
-    try {
-        localStorage.setItem('bunny-todos', JSON.stringify(todos));
-        console.log('💾 Saved todos to localStorage:', todos.length, 'items');
-    } catch (error) {
-        console.error('❌ Error saving to localStorage:', error);
-        showNotification('Error saving tasks!', 'error');
-    }
-}
-
-// Load todos from localStorage
-function loadTodos() {
-    try {
-        const saved = localStorage.getItem('bunny-todos');
-        if (saved) {
-            todos = JSON.parse(saved);
-            console.log('📂 Loaded todos from localStorage:', todos.length, 'items');
-            renderTodos();
-            updateProgress();
-        }
-    } catch (error) {
-        console.error('❌ Error loading from localStorage:', error);
-        todos = [];
-    }
-}
-
 // Helper functions
 function getCategoryIcon(category) {
     const icons = {
@@ -262,6 +351,8 @@ function getCategoryIcon(category) {
 
 function formatDate(dateString) {
     try {
+        if (!dateString) return 'Recently';
+        
         const date = new Date(dateString);
         const now = new Date();
         const diffMs = now - date;
@@ -279,7 +370,7 @@ function formatDate(dateString) {
             day: 'numeric'
         });
     } catch (error) {
-        return '';
+        return 'Recently';
     }
 }
 
@@ -412,6 +503,84 @@ function addMissingStyles() {
                 }
             }
             
+            .sync-status {
+                margin-top: 10px;
+            }
+            
+            .sync-indicator {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                font-weight: bold;
+                background: var(--pastel-blue);
+                color: var(--dark-green);
+                border: 2px solid var(--pastel-blue);
+                animation: pulse 2s infinite;
+            }
+            
+            .sync-indicator.synced {
+                background: var(--pastel-green);
+                color: var(--dark-green);
+                border-color: var(--dark-green);
+            }
+            
+            .sync-indicator.syncing {
+                background: var(--pastel-yellow);
+                color: #b8860b;
+                border-color: #b8860b;
+            }
+            
+            .sync-indicator.local {
+                background: var(--pastel-purple);
+                color: #6a5acd;
+                border-color: #6a5acd;
+            }
+            
+            .quick-actions {
+                display: flex;
+                gap: 10px;
+                margin-top: 15px;
+            }
+            
+            .secondary-btn {
+                padding: 10px 15px;
+                background: var(--pastel-purple);
+                border: 2px solid var(--pastel-blue);
+                border-radius: 12px;
+                color: var(--text);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.9rem;
+                flex: 1;
+                justify-content: center;
+            }
+            
+            .secondary-btn:hover {
+                background: var(--pastel-blue);
+                transform: translateY(-2px);
+            }
+            
+            .cloud-badge {
+                background: var(--pastel-green);
+                color: var(--dark-green);
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 0.7rem;
+                margin-left: 5px;
+            }
+            
+            .footer-info {
+                margin-left: 15px;
+                font-size: 0.9rem;
+                color: var(--dark-pink);
+            }
+            
             .todo-meta {
                 display: flex;
                 justify-content: space-between;
@@ -426,12 +595,11 @@ function addMissingStyles() {
                 color: #888;
             }
             
-            /* Make checkboxes more clickable */
             .todo-checkbox {
                 width: 22px;
                 height: 22px;
                 cursor: pointer;
-                accent-color: #77dd77;
+                accent-color: var(--dark-green);
             }
             
             .todo-checkbox:hover {
@@ -439,7 +607,6 @@ function addMissingStyles() {
                 transition: transform 0.2s;
             }
             
-            /* Filter button active state */
             .filter-btn.active {
                 background: var(--pastel-green);
                 border-color: var(--dark-green);
@@ -456,7 +623,7 @@ function addMissingStyles() {
 addMissingStyles();
 
 // Test function to add sample tasks
-function addSampleTasks() {
+async function addSampleTasks() {
     const sampleTasks = [
         { task: "Buy carrots for bunny 🥕", category: "shopping", completed: false },
         { task: "Finish coding project 💻", category: "work", completed: true },
@@ -465,48 +632,32 @@ function addSampleTasks() {
         { task: "Plan weekend getaway ✈️", category: "personal", completed: true }
     ];
     
-    sampleTasks.forEach((sample, index) => {
-        const newTodo = {
-            id: Date.now() + index,
-            task: sample.task,
-            category: sample.category,
-            completed: sample.completed,
-            created_at: new Date(Date.now() - index * 3600000).toISOString() // Staggered times
-        };
-        
-        todos.push(newTodo);
-    });
+    for (const sample of sampleTasks) {
+        await firebaseService.addTodo(sample);
+    }
     
-    saveTodos();
-    renderTodos();
-    updateProgress();
-    showNotification('Added sample tasks!', 'success');
+    showNotification('Added sample tasks to Firebase!', 'success');
 }
 
 // Export for debugging
 window.todoApp = {
     getTodos: () => todos,
-    clearTodos: () => {
-        todos = [];
-        saveTodos();
-        renderTodos();
-        updateProgress();
-        showNotification('All tasks cleared!', 'info');
-    },
     addSampleTasks: addSampleTasks,
-    reload: () => {
-        renderTodos();
-        updateProgress();
+    importFromLocalStorage: importFromLocalStorage,
+    exportTodos: exportTodos,
+    clearAll: async () => {
+        if (confirm('Clear ALL tasks from Firebase? This cannot be undone.')) {
+            // Note: In production, you'd want to delete all documents
+            showNotification('Clear feature disabled in demo', 'warning');
+        }
     }
 };
 
-// Add a welcome message with sample tasks if empty
+// Add a welcome message
 setTimeout(() => {
-    if (todos.length === 0) {
-        console.log('🆕 No tasks found. Ready for first task!');
-        // Uncomment below if you want sample tasks added automatically
-        // addSampleTasks();
-    }
+    console.log('✅ Todo app loaded with Firebase!');
+    console.log('📝 Available commands:');
+    console.log('   - todoApp.addSampleTasks()');
+    console.log('   - todoApp.importFromLocalStorage()');
+    console.log('   - todoApp.exportTodos()');
 }, 1000);
-
-console.log('✅ Todo app loaded! Try: todoApp.addSampleTasks() in console to test');
