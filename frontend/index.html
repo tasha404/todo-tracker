@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bunny</title>
+    <title>Bunny See, Bunny Do</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -12,13 +12,19 @@
     <div class="floating-element"></div>
     <div class="floating-element"></div>
     <div class="floating-element"></div>
+    
     <div class="container">
         <header>
             <div class="logo">
                 <i class="fas fa-check-circle"></i>
                 <h1>✨ Bunny see, Bunny do ✨</h1>
             </div>
-            <p class="subtitle">STAY FOCUS !!</p>
+            <p class="subtitle">STAY FOCUS !! (Firebase Sync Enabled)</p>
+            <div class="sync-status">
+                <span id="sync-status" class="sync-indicator">
+                    <i class="fas fa-cloud"></i> Synced
+                </span>
+            </div>
         </header>
 
         <div class="dashboard">
@@ -61,6 +67,14 @@
                         <i class="fas fa-plus"></i> Add
                     </button>
                 </div>
+                <div class="quick-actions">
+                    <button id="import-local" class="secondary-btn">
+                        <i class="fas fa-download"></i> Import from Local
+                    </button>
+                    <button id="export-btn" class="secondary-btn">
+                        <i class="fas fa-share"></i> Export Backup
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -85,10 +99,21 @@
         </div>
 
         <footer>
-            <p>Made with <i class="fas fa-heart"></i> by tasha</p>
+            <p>
+                Made with <i class="fas fa-heart"></i> by tasha | 
+                <span class="footer-info">
+                    <i class="fas fa-cloud"></i> Powered by Firebase
+                </span>
+            </p>
         </footer>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="firebase-config.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
