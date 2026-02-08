@@ -6,11 +6,8 @@
     <title>Bunny See, Bunny Do</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module" src="firebase-config.js"></script>
-    <script src="script.js"></script>
-</head>
+    </head>
 <body>
-    <!-- Floating background elements -->
     <div class="floating-element"></div>
     <div class="floating-element"></div>
     <div class="floating-element"></div>
@@ -32,35 +29,34 @@
         <div class="dashboard">
             <div class="progress-card">
                 <h2><i class="fas fa-chart-line"></i> Progress Tracker</h2>
-                <div class="progress-circle">
-                    <svg width="120" height="120" viewBox="0 0 120 120">
-                        <circle class="progress-bg" cx="60" cy="60" r="54"></circle>
-                        <circle class="progress-bar" cx="60" cy="60" r="54"></circle>
-                    </svg>
-                    <div class="progress-text">
-                        <span class="percentage">0%</span>
-                        <span class="completed">0/0 completed</span>
+                <div class="progress-container">
+                    <div class="circular-progress">
+                        <svg>
+                            <circle cx="60" cy="60" r="54"></circle>
+                            <circle cx="60" cy="60" r="54" class="progress-bar"></circle>
+                        </svg>
+                        <div class="percentage">0%</div>
                     </div>
-                </div>
-                <div class="stats">
-                    <div class="stat">
-                        <span class="stat-label">Total Tasks</span>
-                        <span class="stat-value" id="total-tasks">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-label">Completed</span>
-                        <span class="stat-value" id="completed-tasks">0</span>
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span id="completed-tasks">0</span>
+                            <small>Completed</small>
+                        </div>
+                        <div class="stat-item">
+                            <span id="total-tasks">0</span>
+                            <small>Total Tasks</small>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="add-todo">
-                <h2><i class="fas fa-plus-circle"></i> Add New Task</h2>
+            <div class="input-card">
+                <h2><i class="fas fa-pen-fancy"></i> New Task</h2>
                 <div class="input-group">
-                    <input type="text" id="new-task" placeholder="What needs to be done? 🌸" maxlength="100">
+                    <input type="text" id="new-task" placeholder="What's the plan, bunny? 🥕">
                     <select id="task-category">
-                        <option value="general">General 🎀</option>
-                        <option value="work">Work 💼</option>
+                        <option value="general">General ✨</option>
+                        <option value="work">Work 💻</option>
                         <option value="personal">Personal 🌸</option>
                         <option value="shopping">Shopping 🛍️</option>
                         <option value="health">Health 🏃‍♀️</option>
@@ -96,10 +92,7 @@
         </footer>
     </div>
 
-    <!-- Firebase SDK --
-    
-    <!-- Application Scripts -->
     <script type="module" src="firebase-config.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
