@@ -1,3 +1,11 @@
+[file name]: script.js
+[file content begin]
+// Add this at the very beginning
+if (typeof firebaseService === 'undefined') {
+    console.error('Firebase service not loaded. Please refresh the page.');
+}
+
+
 // script.js - Firebase-Enabled Todo App (DEBUG VERSION)
 
 console.log('🚀 script.js loading...');
