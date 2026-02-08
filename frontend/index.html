@@ -6,7 +6,7 @@
     <title>Bunny See, Bunny Do</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    </head>
+</head>
 <body>
     <div class="floating-element"></div>
     <div class="floating-element"></div>
@@ -30,27 +30,30 @@
             <div class="progress-card">
                 <h2><i class="fas fa-chart-line"></i> Progress Tracker</h2>
                 <div class="progress-container">
-                    <div class="circular-progress">
-                        <svg>
-                            <circle cx="60" cy="60" r="54"></circle>
-                            <circle cx="60" cy="60" r="54" class="progress-bar"></circle>
+                    <div class="progress-circle">
+                        <svg width="120" height="120">
+                            <circle class="progress-bg" cx="60" cy="60" r="54"></circle>
+                            <circle class="progress-bar" cx="60" cy="60" r="54"></circle>
                         </svg>
-                        <div class="percentage">0%</div>
+                        <div class="progress-text">
+                            <span class="percentage">0%</span>
+                            <small class="completed">Done!</small>
+                        </div>
                     </div>
                     <div class="stats">
-                        <div class="stat-item">
-                            <span id="completed-tasks">0</span>
-                            <small>Completed</small>
+                        <div class="stat">
+                            <span class="stat-label">Completed</span>
+                            <span id="completed-tasks" class="stat-value">0</span>
                         </div>
-                        <div class="stat-item">
-                            <span id="total-tasks">0</span>
-                            <small>Total Tasks</small>
+                        <div class="stat">
+                            <span class="stat-label">Total Tasks</span>
+                            <span id="total-tasks" class="stat-value">0</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="input-card">
+            <div class="input-card add-todo">
                 <h2><i class="fas fa-pen-fancy"></i> New Task</h2>
                 <div class="input-group">
                     <input type="text" id="new-task" placeholder="What's the plan, bunny? 🥕">
